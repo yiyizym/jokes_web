@@ -1,1 +1,111 @@
-hi test
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>再笑一个</title>
+  <style>
+  .content {
+    height: 300px;
+    padding: 20px;
+    text-align: center;
+  }
+  .get_next_joke {
+    position: absolute;
+    bottom: 20px;
+    width: 80%;
+    height: 40px;
+    transform: translateX(10%);
+    background-color: #04BE02;
+    border: none;
+    color: #fff;
+    border-radius: 5px;
+  }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="content">
+      请点 再笑一个
+    </div>
+    <button class="get_next_joke">再笑一个</button>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function(event){
+      var isGeting;
+      var production_host = 'http://112.74.194.217';
+      var development_host = 'http://192.168.1.100';
+      //注意 CORS 问题，调试时要在 192.168.1.100 起 前、后台服务，或者后台设置 Access-Control-Allow-Origin: *
+      document.querySelector('.get_next_joke').addEventListener('click', function(event){
+        if (isGeting) {
+          return;
+        }
+        getAndSetNextJoke();
+        
+      });
+      function getAndSetNextJoke(){
+        isGeting = true;
+        var currentIndex = getFromLocalStorage('currentIndex') || 0;
+        var pageNumber = getFromLocalStorage('pageNumber') || 0;
+        var jokes = getFromLocalStorage('jokes') || [];
+        if (jokes.length === 0) {
+          getFromBackend(0);
+          
+        } else if(currentIndex >= jokes.length){
+          getFromBackend(++pageNumber);
+        } else {
+          setToLocalStorage('currentIndex', currentIndex + 1);
+          document.querySelector('.content').innerHTML = jokes[currentIndex]['content'];
+          isGeting = false;
+        }
+      }
+      function getFromLocalStorage(key){
+        var rtn;
+        try {
+          rtn = JSON.parse(window.localStorage.getItem(key));
+
+        } catch(e){
+          console.log(e);
+        }
+        return rtn;
+      }
+      function setToLocalStorage(key,val){
+        try {
+          window.localStorage.setItem(key,JSON.stringify(val));
+        } catch(e){
+          console.log(e);
+        }
+      }
+      function getFromBackend(page_num){
+        var request = new XMLHttpRequest();
+        request.open('GET', production_host + '/jokes/get_paginate_joke.json?page_num=' + page_num, true);
+        request.onload = function(){
+          if (request.status >= 200 && request.status < 400) {
+
+            var data = JSON.parse(request.responseText);
+            if (data['return_code'] == 0) {
+              setToLocalStorage('currentIndex', 0);
+              setToLocalStorage('pageNumber', data['page_num']);
+              setToLocalStorage('jokes', data['jokes']);
+
+              document.querySelector('.content').innerHTML = data['jokes'][0]['content'];
+              
+            } else {
+              console.log('return_code: ' + data['return_code'] + 'return_info: ' + data['return_info']);
+            }
+          } else {
+            // We reached our target server, but it returned an error
+            console.log('error ', request.status);
+          }
+          isGeting = false;
+        }
+        request.onerror = function(){
+          console.log('error');
+          isGeting = false;
+        }
+        request.send();
+      }
+    });
+  </script>
+</body>
+</html>
