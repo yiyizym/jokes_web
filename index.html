@@ -44,19 +44,30 @@
         
       });
       function getAndSetNextJoke(){
-        isGeting = true;
+
+        var PAGE_SIZE = 20.0;
         var currentIndex = getFromLocalStorage('currentIndex') || 0;
         var pageNumber = getFromLocalStorage('pageNumber') || 0;
         var jokes = getFromLocalStorage('jokes') || [];
+        var totalCount = getFromLocalStorage('totalCount') || 0;
+        
+        isGeting = true;
         if (jokes.length === 0) {
           getFromBackend(0);
-          
         } else if(currentIndex >= jokes.length){
-          getFromBackend(++pageNumber);
+          getFromBackend(getPageNumber());
         } else {
           setToLocalStorage('currentIndex', currentIndex + 1);
           document.querySelector('.content').innerHTML = jokes[currentIndex]['content'];
           isGeting = false;
+        }
+
+        function getPageNumber(){
+          var maxPageNumber = Math.ceil(totalCount / PAGE_SIZE);
+          if (++pageNumber > maxPageNumber) {
+            pageNumber = 0;
+          }
+          return pageNumber;
         }
       }
       function getFromLocalStorage(key){
@@ -87,7 +98,7 @@
               setToLocalStorage('currentIndex', 0);
               setToLocalStorage('pageNumber', data['page_num']);
               setToLocalStorage('jokes', data['jokes']);
-
+              setToLocalStorage('totalCount', data['total_count']);
               document.querySelector('.content').innerHTML = data['jokes'][0]['content'];
               
             } else {
